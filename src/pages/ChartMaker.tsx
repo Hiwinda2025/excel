@@ -10,12 +10,20 @@ import {
   ArcElement,
   RadialLinearScale,
   Filler,
-  TimeScale,
   Title,
   Tooltip,
-  Legend,
+  Legend
 } from 'chart.js';
-import { Chart } from 'react-chartjs-2';
+import { 
+  Bar, 
+  Line, 
+  Pie, 
+  Doughnut, 
+  Radar, 
+  Scatter, 
+  Bubble, 
+  PolarArea 
+} from 'react-chartjs-2';
 
 // 注册 Chart.js 组件
 ChartJS.register(
@@ -27,7 +35,6 @@ ChartJS.register(
   ArcElement,
   RadialLinearScale,
   Filler,
-  TimeScale,
   Title,
   Tooltip,
   Legend
@@ -39,6 +46,7 @@ const ChartMaker: React.FC = () => {
   // const [isLoading, setIsLoading] = useState<boolean>(false); // 暂时注释，将来可能需要
   const [rawData, setRawData] = useState<any[]>([]);
   const [chartTitle, setChartTitle] = useState<string>('Data Visualization');
+  const [titlePosition, setTitlePosition] = useState<'top' | 'bottom'>('top');
   const chartRef = React.useRef<any>(null);
 
   // 颜色调色板
@@ -193,6 +201,117 @@ const ChartMaker: React.FC = () => {
   };
 
   // 下载功能实现
+  // 渲染不同类型的图表
+  const renderChart = () => {
+    if (!chartData) return null;
+
+    const commonOptions = {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          position: 'top' as const,
+          labels: {
+            usePointStyle: true,
+            padding: 20,
+            font: {
+              size: 12
+            }
+          }
+        },
+        title: {
+          display: true,
+          text: chartTitle,
+          position: titlePosition,
+          font: {
+            size: 16,
+            weight: 'bold' as const
+          },
+          padding: {
+            top: titlePosition === 'top' ? 10 : 30,
+            bottom: titlePosition === 'bottom' ? 10 : 30
+          }
+        },
+        tooltip: {
+          backgroundColor: 'rgba(0, 0, 0, 0.8)',
+          titleColor: 'white',
+          bodyColor: 'white',
+          borderColor: 'rgba(255, 255, 255, 0.1)',
+          borderWidth: 1,
+          cornerRadius: 6,
+          displayColors: true
+        }
+      },
+      scales: chartType === 'radar' || chartType === 'pie' || chartType === 'doughnut' || chartType === 'polarArea' ? undefined : {
+        x: {
+          grid: {
+            color: 'rgba(0, 0, 0, 0.1)'
+          },
+          ticks: {
+            font: {
+              size: 11
+            }
+          }
+        },
+        y: {
+          grid: {
+            color: 'rgba(0, 0, 0, 0.1)'
+          },
+          ticks: {
+            font: {
+              size: 11
+            }
+          }
+        }
+      },
+      elements: {
+        point: {
+          radius: chartType === 'line' ? 4 : 6,
+          hoverRadius: chartType === 'line' ? 6 : 8
+        },
+        line: {
+          borderWidth: 3
+        },
+        bar: {
+          borderRadius: 4
+        }
+      },
+      animation: {
+        duration: 1000,
+        easing: 'easeInOutQuart' as const
+      }
+    };
+
+    const chartProps = {
+      ref: chartRef,
+      data: chartData,
+      options: commonOptions,
+      height: 400
+    };
+
+    switch (chartType) {
+      case 'bar':
+        return <Bar {...chartProps} />;
+      case 'line':
+      case 'area':
+        return <Line {...chartProps} />;
+      case 'pie':
+        return <Pie {...chartProps} />;
+      case 'doughnut':
+        return <Doughnut {...chartProps} />;
+      case 'radar':
+        return <Radar {...chartProps} />;
+      case 'scatter':
+        return <Scatter {...chartProps} />;
+      case 'bubble':
+        return <Bubble {...chartProps} />;
+      case 'polarArea':
+        return <PolarArea {...chartProps} />;
+      default:
+        return <Bar {...chartProps} />;
+    }
+  };
+
   const downloadChart = (format: 'png' | 'svg') => {
     if (!chartRef.current) return;
     
@@ -207,9 +326,9 @@ const ChartMaker: React.FC = () => {
       link.href = url;
       link.click();
     } else if (format === 'svg') {
-      // 对于SVG，我们创建一个包含图表信息的SVG
-      const svgContent = createSVGFromChart();
-      const blob = new Blob([svgContent], { type: 'image/svg+xml' });
+      // 将Canvas转换为SVG
+      const svgContent = createSVGFromChart(canvas);
+      const blob = new Blob([svgContent], { type: 'image/svg+xml;charset=utf-8' });
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.download = `${chartTitle.replace(/\s+/g, '_')}_chart.svg`;
@@ -219,17 +338,19 @@ const ChartMaker: React.FC = () => {
     }
   };
 
-  const createSVGFromChart = () => {
-    // 简化的SVG创建（实际项目中可以使用更复杂的实现）
-    return `
-      <svg xmlns="http://www.w3.org/2000/svg" width="800" height="600">
-        <rect width="100%" height="100%" fill="white"/>
-        <text x="400" y="30" text-anchor="middle" font-size="20" font-weight="bold">${chartTitle}</text>
-        <text x="400" y="300" text-anchor="middle" font-size="16" fill="#666">
-          Chart exported as SVG - ${new Date().toLocaleDateString()}
-        </text>
-      </svg>
-    `;
+  const createSVGFromChart = (canvas: HTMLCanvasElement) => {
+    // 将Canvas内容转换为base64图片，然后嵌入到SVG中
+    const canvasDataURL = canvas.toDataURL('image/png');
+    const width = canvas.width;
+    const height = canvas.height;
+    
+    return `<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" 
+     width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">
+  <title>${chartTitle}</title>
+  <desc>Chart created with Excel Chart Maker on ${new Date().toLocaleDateString()}</desc>
+  <image x="0" y="0" width="${width}" height="${height}" xlink:href="${canvasDataURL}" />
+</svg>`;
   };
 
   const exportData = () => {
@@ -386,178 +507,100 @@ const ChartMaker: React.FC = () => {
               </div>
             )}
 
-            {/* Step 3: Chart Preview */}
+            {/* Chart Display */}
             {chartData && (
               <div>
-                <h2 className="text-xl font-semibold mb-4">Step 3: Chart Preview</h2>
-                
-                {/* 图表配置选项 */}
-                <div className="mb-4 p-4 bg-gray-50 rounded-lg">
-                  <h3 className="font-medium text-gray-700 mb-3">Chart Settings</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-600 mb-1">
-                        Chart Title
-                      </label>
-                      <input
-                        type="text"
-                        value={chartTitle}
-                        className="w-full px-3 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
-                        onChange={(e) => setChartTitle(e.target.value)}
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-600 mb-1">
-                        Legend Position
-                      </label>
-                      <select className="w-full px-3 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500">
-                        <option value="top">Top</option>
-                        <option value="bottom">Bottom</option>
-                        <option value="left">Left</option>
-                        <option value="right">Right</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-600 mb-1">
-                        Animation
-                      </label>
-                      <select className="w-full px-3 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500">
-                        <option value="true">Enabled</option>
-                        <option value="false">Disabled</option>
-                      </select>
-                    </div>
-                  </div>
-                </div>
-
                 {/* 图表显示区域 */}
-                <div className="bg-white p-6 rounded-lg border shadow-sm">
-                  <Chart
-                    ref={chartRef}
-                    type={chartType as any}
-                    data={chartData}
-                    options={{
-                      responsive: true,
-                      maintainAspectRatio: false,
-                      plugins: {
-                        legend: {
-                          position: 'top' as const,
-                          labels: {
-                            usePointStyle: true,
-                            padding: 20,
-                            font: {
-                              size: 12
-                            }
-                          }
-                        },
-                        title: {
-                          display: true,
-                          text: chartTitle,
-                          font: {
-                            size: 16,
-                            weight: 'bold'
-                          },
-                          padding: {
-                            top: 10,
-                            bottom: 30
-                          }
-                        },
-                        tooltip: {
-                          backgroundColor: 'rgba(0, 0, 0, 0.8)',
-                          titleColor: 'white',
-                          bodyColor: 'white',
-                          borderColor: 'rgba(255, 255, 255, 0.1)',
-                          borderWidth: 1,
-                          cornerRadius: 6,
-                          displayColors: true
-                        }
-                      },
-                      scales: chartType === 'radar' || chartType === 'pie' || chartType === 'doughnut' || chartType === 'polarArea' ? undefined : {
-                        x: {
-                          grid: {
-                            color: 'rgba(0, 0, 0, 0.1)'
-                          },
-                          ticks: {
-                            font: {
-                              size: 11
-                            }
-                          }
-                        },
-                        y: {
-                          grid: {
-                            color: 'rgba(0, 0, 0, 0.1)'
-                          },
-                          ticks: {
-                            font: {
-                              size: 11
-                            }
-                          }
-                        }
-                      },
-                      elements: {
-                        point: {
-                          radius: chartType === 'line' ? 4 : 6,
-                          hoverRadius: chartType === 'line' ? 6 : 8
-                        },
-                        line: {
-                          borderWidth: 3
-                        },
-                        bar: {
-                          borderRadius: 4
-                        }
-                      },
-                      animation: {
-                        duration: 1000,
-                        easing: 'easeInOutQuart'
-                      }
-                    }}
-                    height={400}
-                  />
+                <div className="bg-white p-6 rounded-lg border shadow-sm mb-6">
+                  {renderChart()}
                 </div>
 
-                {/* 导出选项 */}
-                <div className="mt-6">
-                  <h3 className="text-lg font-semibold mb-3">Export Options</h3>
-                  <div className="flex flex-wrap gap-3">
-                    <button 
-                      onClick={() => downloadChart('png')}
-                      disabled={!chartData}
-                      className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors flex items-center space-x-2"
-                      title="Download chart as PNG image"
-                    >
-                      <span>📥</span>
-                      <span>Download PNG</span>
-                    </button>
-                    <button 
-                      onClick={() => downloadChart('svg')}
-                      disabled={!chartData}
-                      className="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors flex items-center space-x-2"
-                      title="Download chart as SVG vector"
-                    >
-                      <span>📄</span>
-                      <span>Download SVG</span>
-                    </button>
-                    <button 
-                      onClick={exportData}
-                      disabled={!rawData.length}
-                      className="bg-purple-600 text-white px-4 py-2 rounded-md hover:bg-purple-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors flex items-center space-x-2"
-                      title="Export original data as CSV"
-                    >
-                      <span>📊</span>
-                      <span>Export Data</span>
-                    </button>
-                    <button 
-                      onClick={shareChart}
-                      disabled={!chartData}
-                      className="bg-orange-600 text-white px-4 py-2 rounded-md hover:bg-orange-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors flex items-center space-x-2"
-                      title="Copy shareable link to clipboard"
-                    >
-                      <span>🔗</span>
-                      <span>Share Link</span>
-                    </button>
+                {/* Chart Preview Settings */}
+                <div>
+                  <h2 className="text-xl font-semibold mb-4">Chart Preview</h2>
+                  
+                  {/* 图表配置选项 */}
+                  <div className="mb-4 p-4 bg-gray-50 rounded-lg">
+                    <h3 className="font-medium text-gray-700 mb-3">Chart Settings</h3>
+                    <div className="flex flex-wrap gap-4">
+                      <div className="flex-1 min-w-0" style={{maxWidth: '66.67%'}}>
+                        <label className="block text-sm font-medium text-gray-600 mb-1">
+                          Chart Title
+                        </label>
+                        <input
+                          type="text"
+                          value={chartTitle}
+                          className="w-full px-3 py-2 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
+                          onChange={(e) => setChartTitle(e.target.value)}
+                          placeholder="Enter chart title..."
+                        />
+                      </div>
+                      <div className="flex-1 min-w-0" style={{maxWidth: '33.33%'}}>
+                        <label className="block text-sm font-medium text-gray-600 mb-1">
+                          Title Position
+                        </label>
+                        <select 
+                          value={titlePosition}
+                          onChange={(e) => setTitlePosition(e.target.value as 'top' | 'bottom')}
+                          className="w-full px-3 py-2 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
+                        >
+                          <option value="top">Top</option>
+                          <option value="bottom">Bottom</option>
+                        </select>
+                      </div>
+                    </div>
                   </div>
-                  <p className="text-sm text-gray-500 mt-2">
-                    💡 Tip: Charts are downloaded with transparent backgrounds for easy integration into presentations
-                  </p>
+                </div>
+
+                {/* Step 3: Export Options */}
+                <div className="mt-6">
+                  <h2 className="text-xl font-semibold mb-4">Step 3: Export & Share</h2>
+                  <div className="bg-white p-6 rounded-lg border shadow-sm">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
+                      <button 
+                        onClick={() => downloadChart('png')}
+                        disabled={!chartData}
+                        className="bg-blue-600 text-white px-4 py-3 rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center justify-center space-x-2 font-medium"
+                        title="Download chart as PNG image"
+                      >
+                        <span>📥</span>
+                        <span>Download PNG</span>
+                      </button>
+                      <button 
+                        onClick={() => downloadChart('svg')}
+                        disabled={!chartData}
+                        className="bg-green-600 text-white px-4 py-3 rounded-lg hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center justify-center space-x-2 font-medium"
+                        title="Download chart as SVG vector"
+                      >
+                        <span>📄</span>
+                        <span>Download SVG</span>
+                      </button>
+                      <button 
+                        onClick={exportData}
+                        disabled={!rawData.length}
+                        className="bg-purple-600 text-white px-4 py-3 rounded-lg hover:bg-purple-700 disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center justify-center space-x-2 font-medium"
+                        title="Export original data as CSV"
+                      >
+                        <span>📊</span>
+                        <span>Export Data</span>
+                      </button>
+                      <button 
+                        onClick={shareChart}
+                        disabled={!chartData}
+                        className="bg-orange-600 text-white px-4 py-3 rounded-lg hover:bg-orange-700 disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center justify-center space-x-2 font-medium"
+                        title="Copy shareable link to clipboard"
+                      >
+                        <span>🔗</span>
+                        <span>Share Link</span>
+                      </button>
+                    </div>
+                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                      <p className="text-sm text-blue-700 flex items-center">
+                        <span className="mr-2">💡</span>
+                        <span>Charts are downloaded with transparent backgrounds for easy integration into presentations</span>
+                      </p>
+                    </div>
+                  </div>
                 </div>
               </div>
             )}
