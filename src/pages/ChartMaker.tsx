@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import FileUpload from '../components/FileUpload';
 import {
   Chart as ChartJS,
@@ -41,11 +42,12 @@ ChartJS.register(
 );
 
 const ChartMaker: React.FC = () => {
+  const { t } = useTranslation();
   const [chartData, setChartData] = useState<any>(null);
   const [chartType, setChartType] = useState<string>('bar');
   // const [isLoading, setIsLoading] = useState<boolean>(false); // 暂时注释，将来可能需要
   const [rawData, setRawData] = useState<any[]>([]);
-  const [chartTitle, setChartTitle] = useState<string>('Data Visualization');
+  const [chartTitle, setChartTitle] = useState<string>(t('chartMaker.title'));
   const [titlePosition, setTitlePosition] = useState<'top' | 'bottom'>('top');
   const chartRef = React.useRef<any>(null);
 
@@ -398,29 +400,29 @@ const ChartMaker: React.FC = () => {
     <div className="min-h-screen bg-gray-50 py-8">
       <div className="container mx-auto px-4">
         <h1 className="text-3xl font-bold text-gray-900 mb-8 text-center">
-          Create Your Chart
+          {t('chartMaker.title')}
         </h1>
         
         <div className="max-w-4xl mx-auto bg-white rounded-lg shadow-md p-6">
           <div className="space-y-8">
             {/* Step 1: File Upload */}
             <div>
-              <h2 className="text-xl font-semibold mb-4">Step 1: Upload Excel File</h2>
+              <h2 className="text-xl font-semibold mb-4">{t('chartMaker.uploadSection.title')}</h2>
               <FileUpload onFileUpload={handleFileUpload} />
             </div>
 
             {/* Step 2: Chart Type Selection */}
             {chartData && (
               <div>
-                <h2 className="text-xl font-semibold mb-4">Step 2: Select Chart Type</h2>
+                <h2 className="text-xl font-semibold mb-4">{t('chartMaker.chartTypes.title')}</h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
                   {/* 基础图表 */}
                   <div className="space-y-2">
                     <h3 className="font-medium text-gray-700">Basic Charts</h3>
                     <div className="space-y-1">
                       {[
-                        { value: 'bar', label: '📊 Bar Chart', desc: 'Compare categories' },
-                        { value: 'line', label: '📈 Line Chart', desc: 'Show trends over time' },
+                        { value: 'bar', label: `📊 ${t('chartMaker.chartTypes.bar')}`, desc: 'Compare categories' },
+                        { value: 'line', label: `📈 ${t('chartMaker.chartTypes.line')}`, desc: 'Show trends over time' },
                         { value: 'area', label: '📉 Area Chart', desc: 'Filled line chart' }
                       ].map(chart => (
                         <label key={chart.value} className="flex items-center space-x-2 cursor-pointer hover:bg-gray-50 p-2 rounded">
@@ -449,8 +451,8 @@ const ChartMaker: React.FC = () => {
                     <h3 className="font-medium text-gray-700">Circular Charts</h3>
                     <div className="space-y-1">
                       {[
-                        { value: 'pie', label: '🥧 Pie Chart', desc: 'Show proportions' },
-                        { value: 'doughnut', label: '🍩 Doughnut Chart', desc: 'Pie with center hole' },
+                        { value: 'pie', label: `🥧 ${t('chartMaker.chartTypes.pie')}`, desc: 'Show proportions' },
+                        { value: 'doughnut', label: `🍩 ${t('chartMaker.chartTypes.doughnut')}`, desc: 'Pie with center hole' },
                         { value: 'polarArea', label: '🎯 Polar Area', desc: 'Circular bar chart' }
                       ].map(chart => (
                         <label key={chart.value} className="flex items-center space-x-2 cursor-pointer hover:bg-gray-50 p-2 rounded">
@@ -517,15 +519,15 @@ const ChartMaker: React.FC = () => {
 
                 {/* Chart Preview Settings */}
                 <div>
-                  <h2 className="text-xl font-semibold mb-4">Chart Preview</h2>
+                  <h2 className="text-xl font-semibold mb-4">{t('chartMaker.preview.title')}</h2>
                   
                   {/* 图表配置选项 */}
                   <div className="mb-4 p-4 bg-gray-50 rounded-lg">
-                    <h3 className="font-medium text-gray-700 mb-3">Chart Settings</h3>
+                    <h3 className="font-medium text-gray-700 mb-3">{t('chartMaker.chartOptions.title')}</h3>
                     <div className="flex flex-wrap gap-4">
                       <div className="flex-1 min-w-0" style={{maxWidth: '66.67%'}}>
                         <label className="block text-sm font-medium text-gray-600 mb-1">
-                          Chart Title
+                          {t('chartMaker.chartOptions.chartTitle')}
                         </label>
                         <input
                           type="text"
@@ -554,7 +556,7 @@ const ChartMaker: React.FC = () => {
 
                 {/* Step 3: Export Options */}
                 <div className="mt-6">
-                  <h2 className="text-xl font-semibold mb-4">Step 3: Export & Share</h2>
+                  <h2 className="text-xl font-semibold mb-4">{t('chartMaker.export.title')}</h2>
                   <div className="bg-white p-6 rounded-lg border shadow-sm">
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
                       <button 
@@ -564,7 +566,7 @@ const ChartMaker: React.FC = () => {
                         title="Download chart as PNG image"
                       >
                         <span>📥</span>
-                        <span>Download PNG</span>
+                        <span>{t('chartMaker.export.downloadPNG')}</span>
                       </button>
                       <button 
                         onClick={() => downloadChart('svg')}
@@ -573,7 +575,7 @@ const ChartMaker: React.FC = () => {
                         title="Download chart as SVG vector"
                       >
                         <span>📄</span>
-                        <span>Download SVG</span>
+                        <span>{t('chartMaker.export.downloadSVG')}</span>
                       </button>
                       <button 
                         onClick={exportData}
